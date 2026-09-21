@@ -20,9 +20,9 @@ A small service that ingests health reports from EV charging stations, computes 
 
 ### As implemented (local)
 
-![High-level architecture](docs/architecture.svg)
+![High-level architecture](architecture.svg)
 
-Full parameter-level detail (config, schema, API contracts, algorithms, frontend) is in [docs/LLD.md](docs/LLD.md).
+Full parameter-level detail (config, schema, API contracts, algorithms, frontend) is in [LLD.md](LLD.md).
 
 - **Framework: Django + DRF.** It matches the team's stack, the ORM and migrations are mature, and `drf-spectacular` generates the OpenAPI spec. FastAPI was considered; its advantage (async I/O throughput) matters mostly for the ingestion tier at scale, which Section 6 handles by decoupling ingestion with a queue instead.
 - **Layering:** thin views and serializers handle HTTP and validation only. Business logic lives in a service layer. Scoring is a **pure function** with no database or framework imports, so it can be unit-tested in isolation and later moved into a queue worker unchanged.
@@ -126,6 +126,6 @@ All endpoints are under `/api/v1`. OpenAPI schema at `/api/schema/`, Swagger UI 
 - **Authentication/authorization** — not implemented; every endpoint is open (Section 8).
 - **Staleness / silent-station detection** — "flag stations whose score falls below a threshold" doesn't require tracking silence; adding it later is a scheduled job, not a scoring change (Section 7).
 - **State-transition event log (`station_events`)** — a nice-to-have for alerting and audit history, not required by the current read APIs (Section 7).
-- **Rolling-window scoring, per-report score history, and the resulting row-locking / idempotent multi-row insert machinery** — the single-report formula (Section 4) is simpler, is still "any reasonable formula," and removes the need to recompute and store a score per report. The accepted trade-off: two concurrent writes for the *same* station could theoretically race on which one's fields end up as "latest," since there is no row lock. At this scale that's an acceptable, documented simplification; Section 6 describes the queued design that would remove the race entirely at 100K+ stations by serializing per-station writes through a single worker.
+- **Rolling-window scoring, per-report score history, and the resulting idempotent multi-row insert machinery** — the single-report formula (Section 4) is simpler, is still "any reasonable formula," and removes the need to recompute and store a score per report. Concurrent writes for the *same* station are serialized with `select_for_update()` inside the ingestion transaction, so the "never goes back in time" guarantee holds even under concurrent requests; Section 6 describes the queued design that would remove the need for row locking entirely at 100K+ stations by serializing per-station writes through a single worker.
 - **Cursor pagination** — a plain `limit` is enough for "list all stations with poor hygiene"; cursor-based paging solves a scale problem this system doesn't have yet.
 - **Queued ingestion, alerting, anomaly detection, and multi-region** — described in Sections 6–7 but not implemented. The service is synchronous by design, and the service-layer boundary (`stations/services/ingestion.py`) is where a queue would slot in without changing the scoring logic or the read API contract.

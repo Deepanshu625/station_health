@@ -9,13 +9,19 @@ from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, OpenApiTypes, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from stations.exceptions import BatchTooLarge, BatchValidationError, InvalidQueryParam
-from stations.serializers import ReportItemSerializer
+from stations.serializers import (
+    IngestResponseSerializer,
+    MetricsResponseSerializer,
+    PoorHygieneResponseSerializer,
+    ReportItemSerializer,
+    StationHealthResponseSerializer,
+)
 from stations.services import metrics as metrics_service
 from stations.services import queries
 from stations.services.ingestion import ingest_reports
@@ -55,7 +61,7 @@ class ReportsView(APIView):
 
     @extend_schema(
         request=ReportItemSerializer(many=True),
-        responses={201: OpenApiResponse(description="Reports ingested.")},
+        responses={201: IngestResponseSerializer},
     )
     def post(self, request):
         app_config = settings.APP_CONFIG
@@ -109,7 +115,7 @@ class ReportsView(APIView):
 class StationHealthView(APIView):
     """`GET /api/v1/stations/{station_id}/health`: latest status, score and breakdown."""
 
-    @extend_schema(responses={200: OpenApiResponse(response=OpenApiTypes.OBJECT)})
+    @extend_schema(responses={200: StationHealthResponseSerializer})
     def get(self, request, station_id: str):
         logger.info(f"Event:StationHealthView {station_id} fetching station health")
         data = queries.get_station_health(station_id)
@@ -124,7 +130,7 @@ class PoorHygieneView(APIView):
             OpenApiParameter("region", OpenApiTypes.STR, required=False),
             OpenApiParameter("limit", OpenApiTypes.INT, required=False),
         ],
-        responses={200: OpenApiResponse(response=OpenApiTypes.OBJECT)},
+        responses={200: PoorHygieneResponseSerializer},
     )
     def get(self, request):
         app_config = settings.APP_CONFIG
@@ -146,7 +152,7 @@ class MetricsView(APIView):
         parameters=[
             OpenApiParameter("group_by", OpenApiTypes.STR, required=False, enum=["region"]),
         ],
-        responses={200: OpenApiResponse(response=OpenApiTypes.OBJECT)},
+        responses={200: MetricsResponseSerializer},
     )
     def get(self, request):
         group_by = request.query_params.get("group_by") or None

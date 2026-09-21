@@ -1,12 +1,14 @@
 # Station Health Service
 
+> Design docs live in [docs/](docs/): architecture and reasoning in [docs/DESIGN.md](docs/DESIGN.md), the parameter-level spec in [docs/LLD.md](docs/LLD.md), and scaling/security/testing/CI-CD/AWS-mapping/AI-usage notes in [docs/APPENDIX.md](docs/APPENDIX.md).
+
 ## 1. Overview
 
 Station Health ingests periodic health reports from EV charging stations (connectivity, latency, error counts, firmware version), computes a **network hygiene score** per station from its most recent report, and exposes a REST API plus a small NOC dashboard so operators can find problem stations. A station is flagged **poor** when its score falls below 60.
 
 ![High-level architecture](docs/architecture.svg)
 
-Full design rationale is in [DESIGN.md](DESIGN.md); the parameter-level specification is in [docs/LLD.md](docs/LLD.md).
+Full design rationale is in [docs/DESIGN.md](docs/DESIGN.md); the parameter-level specification is in [docs/LLD.md](docs/LLD.md).
 
 ## 2. Quick start
 
@@ -24,6 +26,8 @@ Once `app` is healthy, open:
 - Health check: <http://localhost:8000/healthz>
 
 The dashboard starts empty until you post some reports — see the next section for a curl example, or `POST` a few for different stations to see the overview populate.
+
+![Dashboard overview](docs/dashboard.png)
 
 ### Running locally without Docker
 
@@ -132,7 +136,7 @@ pytest --cov --cov-report=term-missing
 
 ## 4. Try the API
 
-All examples assume the default base URL `http://localhost:8000`. No authentication is required on any endpoint (see DESIGN.md §8 for why).
+All examples assume the default base URL `http://localhost:8000`. No authentication is required on any endpoint (see docs/DESIGN.md §6 for why).
 
 **Ingest a single report:**
 
@@ -248,8 +252,8 @@ station_health/
     integration/             # API + real PostgreSQL
   docs/
     architecture.svg
+    DESIGN.md
     LLD.md
-  DESIGN.md
   README.md
   Dockerfile
   docker-compose.yml
@@ -259,12 +263,13 @@ station_health/
 
 ## 7. Design documents
 
-- [DESIGN.md](DESIGN.md) — architecture and reasoning
+- [docs/DESIGN.md](docs/DESIGN.md) — architecture and reasoning
 - [docs/LLD.md](docs/LLD.md) — parameter-level specification
+- [docs/APPENDIX.md](docs/APPENDIX.md) — scaling, extensibility, security, testing, CI/CD, AWS mapping, and AI usage
 
 ## 8. Assumptions
 
-Carried over from [DESIGN.md §1](DESIGN.md#1-assumptions):
+Carried over from [docs/DESIGN.md §1](docs/DESIGN.md#1-assumptions):
 
 | Area | Assumption |
 |---|---|
@@ -273,19 +278,11 @@ Carried over from [DESIGN.md §1](DESIGN.md#1-assumptions):
 | Region | Not in the specified payload. The API accepts an optional `region` field; a station keeps the region from its first report, defaulting to `unassigned`. |
 | Firmware | "Outdated" means below a configured minimum supported version. Unparseable versions count as unknown. |
 | Auth | Not implemented; every endpoint is open. |
-| Scoring basis | Computed from a station's single most recent report, not a rolling window — see DESIGN.md §4 for the trade-off. |
+| Scoring basis | Computed from a station's single most recent report, not a rolling window — see docs/DESIGN.md §4 for the trade-off. |
 
 Additional assumptions made while implementing:
 
-- No authentication, cursor pagination, per-report score history, or staleness/event-log features are implemented; DESIGN.md §13 lists these and why, with pointers to how each would be added.
+- No authentication, cursor pagination, per-report score history, or staleness/event-log features are implemented; docs/DESIGN.md §6 lists these and why, with pointers to how each would be added.
 - An empty batch (`[]`) on `POST /reports` is rejected as a validation error, since the spec implies at least one report per request.
 
-## 9. AI usage
 
-_To be completed by the author._
-
-## 10. Troubleshooting
-
-- **Port already in use:** another process is bound to `8000` or `5432`. Stop it, or change the host port mapping in `docker-compose.yml`.
-- **App can't reach the database yet:** the `app` service waits for `db`'s healthcheck, but if you see connection errors right after `up`, wait a few seconds and retry — Postgres can take a moment to finish initializing on the very first run.
-- **Resetting all data:** `docker compose down -v` removes the named `pgdata` volume along with the containers, giving you a clean database on the next `up`.

@@ -38,6 +38,8 @@ def _ingest_one(report: ReportIn, received_at: datetime, config: ScoringConfig) 
             station_id=report.station_id,
             defaults={"region": report.region or "unassigned"},
         )
+        # Lock the row so concurrent reports for this station serialize here.
+        station = Station.objects.select_for_update().get(pk=station.pk)
         if station.region == "unassigned" and report.region:
             station.region = report.region
 

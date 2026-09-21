@@ -1,4 +1,4 @@
-"""Request validation for ingestion. Serializers only validate."""
+"""Request validation for ingestion, plus response serializers used only for the OpenAPI schema."""
 
 from __future__ import annotations
 
@@ -51,3 +51,93 @@ class ReportItemSerializer(serializers.Serializer):
         if parsed < oldest_allowed:
             raise serializers.ValidationError("Timestamp is older than the maximum allowed age.")
         return parsed
+
+
+# --- Response serializers (schema documentation only; never used to validate input) ---
+
+
+class IngestResponseSerializer(serializers.Serializer):
+    accepted = serializers.IntegerField()
+    duplicates = serializers.IntegerField()
+
+
+class AvailabilityComponentSerializer(serializers.Serializer):
+    points = serializers.FloatField()
+    max = serializers.IntegerField()
+    connectivity_status = serializers.ChoiceField(choices=["online", "offline"])
+
+
+class LatencyComponentSerializer(serializers.Serializer):
+    points = serializers.FloatField()
+    max = serializers.IntegerField()
+    latency_ms = serializers.IntegerField(allow_null=True)
+
+
+class ErrorsComponentSerializer(serializers.Serializer):
+    points = serializers.FloatField()
+    max = serializers.IntegerField()
+    error_count = serializers.IntegerField()
+
+
+class FirmwareComponentSerializer(serializers.Serializer):
+    points = serializers.FloatField()
+    max = serializers.IntegerField()
+    version = serializers.CharField()
+    minimum = serializers.CharField()
+    status = serializers.ChoiceField(choices=["supported", "outdated", "unknown"])
+
+
+class ScoreComponentsSerializer(serializers.Serializer):
+    availability = AvailabilityComponentSerializer()
+    latency = LatencyComponentSerializer()
+    errors = ErrorsComponentSerializer()
+    firmware = FirmwareComponentSerializer()
+
+
+class StationHealthResponseSerializer(serializers.Serializer):
+    station_id = serializers.CharField()
+    region = serializers.CharField()
+    connectivity_status = serializers.ChoiceField(
+        choices=["online", "offline"], allow_null=True
+    )
+    latency_ms = serializers.IntegerField(allow_null=True)
+    error_count = serializers.IntegerField(allow_null=True)
+    firmware_version = serializers.CharField(allow_null=True)
+    last_reported_at = serializers.DateTimeField(allow_null=True)
+    hygiene_score = serializers.FloatField(allow_null=True)
+    is_poor = serializers.BooleanField()
+    score_components = ScoreComponentsSerializer(allow_null=True)
+
+
+class PoorHygieneItemSerializer(serializers.Serializer):
+    station_id = serializers.CharField()
+    region = serializers.CharField()
+    hygiene_score = serializers.FloatField(allow_null=True)
+    connectivity_status = serializers.ChoiceField(
+        choices=["online", "offline"], allow_null=True
+    )
+    last_reported_at = serializers.DateTimeField(allow_null=True)
+
+
+class PoorHygieneResponseSerializer(serializers.Serializer):
+    results = PoorHygieneItemSerializer(many=True)
+    count = serializers.IntegerField()
+
+
+class MetricsAggregateSerializer(serializers.Serializer):
+    stations = serializers.IntegerField()
+    online = serializers.IntegerField()
+    offline = serializers.IntegerField()
+    poor = serializers.IntegerField()
+    avg_latency_ms = serializers.FloatField(allow_null=True)
+    avg_hygiene_score = serializers.FloatField(allow_null=True)
+
+
+class MetricsRegionGroupSerializer(MetricsAggregateSerializer):
+    region = serializers.CharField()
+
+
+class MetricsResponseSerializer(serializers.Serializer):
+    generated_at = serializers.DateTimeField()
+    overall = MetricsAggregateSerializer()
+    groups = MetricsRegionGroupSerializer(many=True)

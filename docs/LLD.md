@@ -1,6 +1,6 @@
 # Station Health Service — Low-Level Design
 
-This document specifies the parameters, schema and API contract for the service described in [DESIGN.md](../DESIGN.md). It reflects what is actually implemented; forward-looking extensions (queueing, alerting, anomaly detection, multi-region, auth) are documented in DESIGN.md §6–8 and §13, not here.
+This document specifies the parameters, schema and API contract for the service described in [DESIGN.md](DESIGN.md). It reflects what is actually implemented; forward-looking extensions (queueing, alerting, anomaly detection, multi-region, auth) are documented in DESIGN.md §6–8 and §13, not here.
 
 **Conventions**
 
@@ -310,8 +310,8 @@ station_health/
     integration/            # API + real PostgreSQL
   docs/
     architecture.svg
+    DESIGN.md
     LLD.md
-  DESIGN.md
   README.md
   Dockerfile
   docker-compose.yml
