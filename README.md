@@ -1,6 +1,10 @@
 # Station Health Service
 
-> Design docs live in [docs/](docs/): architecture and reasoning in [docs/DESIGN.md](docs/DESIGN.md), the parameter-level spec in [docs/LLD.md](docs/LLD.md), and scaling/security/testing/CI-CD/AWS-mapping/AI-usage notes in [docs/APPENDIX.md](docs/APPENDIX.md).
+> Design docs live in [docs/](docs/):
+>- architecture and reasoning in [docs/DESIGN.md](docs/DESIGN.md)
+>- the parameter-level spec in [docs/LLD.md](docs/LLD.md)
+>- scaling/security/testing/CI-CD/AWS-mapping/AI-usage notes in [docs/APPENDIX.md](docs/APPENDIX.md)
+
 
 ## 1. Overview
 
