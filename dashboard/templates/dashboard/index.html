@@ -1,0 +1,33 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Station Health</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
+</head>
+<body data-refresh-seconds="{{ refresh_seconds }}">
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__title">Station Health</span>
+      <span class="app-header__subtitle">NOC &middot; Network hygiene</span>
+    </div>
+    <div class="app-header__status">
+      <span id="updated-label" class="app-header__updated">Loading&hellip;</span>
+      <button id="refresh-button" type="button" class="button button--refresh">Refresh</button>
+    </div>
+  </header>
+
+  <div id="error-banner" class="banner banner--warning" hidden></div>
+
+  <main id="app">
+    <section id="view-overview" class="view"></section>
+    <section id="view-station" class="view" hidden></section>
+  </main>
+
+  <script type="module" src="{% static 'dashboard/app.js' %}"></script>
+</body>
+</html>

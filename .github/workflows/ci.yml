@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DATABASE_URL: postgres://health:health@localhost:5432/health
+  DJANGO_SECRET_KEY: ci-secret-key
+  DJANGO_DEBUG: "false"
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: health
+          POSTGRES_PASSWORD: health
+          POSTGRES_DB: health
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U health -d health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Format check (ruff format)
+        run: ruff format --check .
+
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=85
+
+      - name: Enforce 100% coverage on scoring.py
+        run: |
+          pytest tests/unit --cov=stations.services.scoring --cov-report=term-missing --cov-fail-under=100
+
+      - name: Validate OpenAPI schema
+        run: python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yaml
+
+      - name: Build Docker image
+        run: docker build -t station-health:ci .
